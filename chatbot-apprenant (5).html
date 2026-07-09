@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZoomX</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%238b5cf6'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-family='Segoe UI, Arial, sans-serif' font-size='34' font-weight='800' fill='white' text-anchor='middle'%3EZ%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg1:#1e1b4b;
+    --bg2:#4c1d95;
+    --accent:#8b5cf6;
+    --accent2:#ec4899;
+    --panel:#ffffffee;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --bubble-user:#8b5cf6;
+    --bubble-bot:#f1f0fe;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    background:linear-gradient(135deg, var(--bg1), var(--bg2));
+    min-height:100vh;
+    padding:24px;
+    color:var(--text);
+  }
+  .app{
+    max-width:1100px;
+    margin:0 auto;
+  }
+  header{
+    text-align:center;
+    color:white;
+    margin-bottom:24px;
+  }
+  header h1{
+    margin:0 0 4px 0;
+    font-size:28px;
+  }
+  header p{
+    margin:0;
+    opacity:0.85;
+    font-size:14px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap:20px;
+  }
+  @media (max-width: 800px){
+    .grid{ grid-template-columns: 1fr; }
+  }
+  .panel{
+    background:var(--panel);
+    border-radius:16px;
+    padding:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.25);
+    display:flex;
+    flex-direction:column;
+  }
+  .panel h2{
+    margin:0 0 12px 0;
+    font-size:17px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  textarea, input[type="text"]{
+    width:100%;
+    border:1px solid #ddd;
+    border-radius:10px;
+    padding:10px 12px;
+    font-family:inherit;
+    font-size:14px;
+    resize:vertical;
+    outline:none;
+    transition:border-color .15s;
+  }
+  textarea:focus, input[type="text"]:focus{
+    border-color:var(--accent);
+  }
+  textarea{ min-height:110px; }
+  button{
+    border:none;
+    border-radius:10px;
+    padding:10px 16px;
+    background:linear-gradient(135deg, var(--accent), var(--accent2));
+    color:white;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    transition:transform .1s, opacity .1s;
+  }
+  button:hover{ opacity:0.92; }
+  button:active{ transform:scale(0.97); }
+  button.secondary{
+    background:#e5e7eb;
+    color:#374151;
+  }
+  .row{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .stats{
+    display:flex;
+    gap:16px;
+    margin-top:14px;
+    font-size:13px;
+    color:var(--muted);
+    flex-wrap:wrap;
+  }
+  .stats span b{ color:var(--text); }
+  .qa-fields{ display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .divider{
+    border:none;
+    border-top:1px solid #e5e7eb;
+    margin:16px 0;
+  }
+  .memory-list{
+    max-height:110px;
+    overflow-y:auto;
+    font-size:12px;
+    color:var(--muted);
+    background:#f9fafb;
+    border-radius:8px;
+    padding:8px;
+    margin-top:8px;
+  }
+  .memory-list div{ padding:2px 0; border-bottom:1px dashed #e5e7eb; }
+  .memory-list div:last-child{ border-bottom:none; }
+
+  .profile-fields{ display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .profiles-list{
+    max-height:180px;
+    overflow-y:auto;
+    margin-top:10px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .profile-card{
+    background:#f9fafb;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:10px 12px;
+  }
+  .profile-card .profile-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:6px;
+  }
+  .profile-card .profile-name{
+    font-weight:700;
+    font-size:14px;
+    color:var(--accent);
+  }
+  .profile-card .profile-del{
+    cursor:pointer;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .profile-card .profile-del:hover{ color:#dc2626; }
+  .profile-card .attr-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:12.5px;
+    color:var(--text);
+    padding:2px 0;
+  }
+  .profile-card .attr-row .attr-label{ color:var(--muted); text-transform:capitalize; }
+
+  /* Chat panel */
+  .chat-panel{ height:600px; padding:0; overflow:hidden; flex-direction:row; }
+  .conv-sidebar{
+    width:190px;
+    flex-shrink:0;
+    background:#f7f6fb;
+    border-right:1px solid #e5e7eb;
+    display:flex;
+    flex-direction:column;
+    padding:16px 10px;
+  }
+  .conv-sidebar h3{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--muted);
+    margin:14px 6px 6px 6px;
+  }
+  .new-conv-btn{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:transparent;
+    color:var(--accent);
+    border:1px solid #e2ddfa;
+    font-size:13px;
+    padding:8px 10px;
+    justify-content:flex-start;
+  }
+  .new-conv-btn:hover{ background:#f1edfe; opacity:1; }
+  .conv-list{
+    overflow-y:auto;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .conv-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 10px;
+    border-radius:8px;
+    font-size:13px;
+    color:var(--text);
+    cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .conv-item:hover{ background:#ece9fb; }
+  .conv-item.active{ background:#e5defc; font-weight:600; }
+  .conv-item .title{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  .conv-item .del-btn{
+    display:none;
+    color:var(--muted);
+    font-size:14px;
+    padding:0 4px;
+  }
+  .conv-item:hover .del-btn{ display:inline; }
+  .conv-item .del-btn:hover{ color:#dc2626; }
+  .chat-main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding:20px;
+    min-width:0;
+  }
+  #chatWindow{
+    flex:1;
+    overflow-y:auto;
+    padding:6px 4px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .msg{
+    max-width:78%;
+    padding:10px 14px;
+    border-radius:16px;
+    font-size:14px;
+    line-height:1.4;
+  }
+  .msg.user{
+    align-self:flex-end;
+    background:var(--bubble-user);
+    color:white;
+    border-bottom-right-radius:4px;
+  }
+  .msg.bot{
+    align-self:flex-start;
+    background:var(--bubble-bot);
+    color:var(--text);
+    border-bottom-left-radius:4px;
+  }
+  .msg.system{
+    align-self:center;
+    background:transparent;
+    color:var(--muted);
+    font-style:italic;
+    font-size:12px;
+  }
+  .chat-input-row{
+    display:flex;
+    gap:8px;
+  }
+  .chat-input-row input{ flex:1; }
+  footer{
+    text-align:center;
+    color:rgba(255,255,255,0.6);
+    font-size:12px;
+    margin-top:20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>🧠 ZoomX</h1>
+    <p>Un chatbot qui apprend uniquement à partir des textes et des exemples que vous lui donnez — tout reste dans votre navigateur.</p>
+  </header>
+
+  <div class="grid">
+    <!-- PANEL ENTRAINEMENT -->
+    <div class="panel">
+      <h2>📚 Entraîner le chatbot</h2>
+      <p style="font-size:13px;color:var(--muted);margin-top:-6px;">Collez un texte (article, histoire, description...). Le bot en extrait un vocabulaire et une structure de phrases pour générer ses réponses.</p>
+      <textarea id="trainText" placeholder="Collez ici le texte à apprendre..."></textarea>
+      <div class="row">
+        <button onclick="learnText()">➕ Apprendre ce texte</button>
+        <button class="secondary" onclick="clearMemory()">🗑️ Réinitialiser la mémoire</button>
+      </div>
+
+      <hr class="divider">
+
+      <h2 style="font-size:15px;">💬 Apprendre une question/réponse précise</h2>
+      <div class="qa-fields">
+        <input type="text" id="qaQuestion" placeholder="Question (ex : Quelle est la capitale de la France ?)">
+        <input type="text" id="qaAnswer" placeholder="Réponse (ex : La capitale de la France est Paris.)">
+        <button onclick="learnQA()">➕ Ajouter cette paire</button>
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <div class="memory-list" id="memoryList"></div>
+
+      <hr class="divider">
+
+      <h2 style="font-size:15px;">👤 Fiches personnes (noms, âge, ville, couleur...)</h2>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:-6px;">ZoomX retient aussi automatiquement ce que vous lui dites dans le chat (ex : « je m'appelle Léa, j'ai 20 ans, j'habite à Lyon »).</p>
+      <div class="profile-fields">
+        <input type="text" id="profileName" placeholder="Nom (ex : Léa)">
+        <input type="text" id="profileCategory" list="categoryList" placeholder="Catégorie (âge, ville, couleur préférée...)">
+        <datalist id="categoryList">
+          <option value="Âge">
+          <option value="Ville">
+          <option value="Couleur préférée">
+          <option value="Métier">
+          <option value="Passe-temps">
+        </datalist>
+        <input type="text" id="profileValue" placeholder="Valeur (ex : Lyon)">
+        <button onclick="saveProfileField()">➕ Enregistrer dans la fiche</button>
+      </div>
+      <div class="profiles-list" id="profilesList"></div>
+    </div>
+
+    <!-- PANEL CHAT -->
+    <div class="panel chat-panel">
+      <div class="conv-sidebar">
+        <button class="new-conv-btn" onclick="newDiscussion()">➕ Nouvelle conversation</button>
+        <h3>Discussions</h3>
+        <div class="conv-list" id="convList"></div>
+      </div>
+      <div class="chat-main">
+        <div id="chatWindow"></div>
+        <div class="chat-input-row">
+          <input type="text" id="userInput" placeholder="Écrivez votre message..." onkeydown="if(event.key==='Enter') sendMessage()">
+          <button onclick="sendMessage()">Envoyer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Mémoire stockée localement (localStorage) — rien n'est envoyé sur un serveur.</footer>
+</div>
+
+<script>
+/* ---------------------- STOPWORDS (français) ---------------------- */
+const STOPWORDS = new Set(["le","la","les","un","une","des","de","du","et","à","au","aux","en","que","qui",
+"ce","ces","cet","cette","est","sont","être","avoir","a","ai","as","avons","avez","ont","je","tu","il","elle",
+"nous","vous","ils","elles","on","son","sa","ses","mon","ma","mes","ton","ta","tes","notre","nos","votre","vos",
+"leur","leurs","pour","par","sur","dans","avec","sans","pas","ne","plus","moins","très","donc","or","ni","car",
+"si","comment","pourquoi","quand","où","quoi","quel","quelle","quels","quelles","d","l","qu","c","s","y","se",
+"me","te","lui","leur","comme","mais","aussi","alors","donc","bien","peu","tout","toute","tous","toutes"]);
+
+/* ---------------------- ETAT / MEMOIRE ---------------------- */
+let memory = {
+  texts: [],        // liste des textes bruts appris
+  model: {},        // chaine de markov: mot(lowercase) -> [mots suivants originaux ou null pour fin de phrase]
+  qa: [],           // [{question, answer}]
+  profiles: {}      // { "nomlowercase": { displayName, attributes: { "âge": "25", "ville": "Lyon", ... } } }
+};
+
+function loadMemory(){
+  try{
+    const raw = localStorage.getItem('chatbotApprenantMemory');
+    if(raw){
+      memory = JSON.parse(raw);
+      if(!memory.texts) memory.texts = [];
+      if(!memory.model) memory.model = {};
+      if(!memory.qa) memory.qa = [];
+      if(!memory.profiles) memory.profiles = {};
+    }
+  }catch(e){ console.error('Erreur chargement mémoire', e); }
+}
+
+function saveMemory(){
+  try{
+    localStorage.setItem('chatbotApprenantMemory', JSON.stringify(memory));
+  }catch(e){ console.error('Erreur sauvegarde mémoire', e); }
+}
+
+/* ---------------------- APPRENTISSAGE DE TEXTE ---------------------- */
+function tokenizeSentence(sentence){
+  return sentence.trim().split(/\s+/).filter(w => w.length > 0);
+}
+
+function splitIntoSentences(text){
+  return text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
+function learnText(){
+  const textarea = document.getElementById('trainText');
+  const text = textarea.value.trim();
+  if(!text){
+    addMessage('system', "Ajoutez d'abord un texte dans la zone d'entraînement.");
+    return;
+  }
+
+  const sentences = splitIntoSentences(text);
+  let sentenceCount = 0;
+
+  sentences.forEach(sentence => {
+    const tokens = tokenizeSentence(sentence);
+    if(tokens.length < 2) return;
+    sentenceCount++;
+    for(let i = 0; i < tokens.length - 1; i++){
+      const key = normalizeWord(tokens[i]);
+      if(!memory.model[key]) memory.model[key] = [];
+      memory.model[key].push(tokens[i+1]);
+    }
+    const lastKey = normalizeWord(tokens[tokens.length - 1]);
+    if(!memory.model[lastKey]) memory.model[lastKey] = [];
+    memory.model[lastKey].push(null); // marque une fin de phrase possible
+  });
+
+  memory.texts.push(text.length > 80 ? text.slice(0, 80) + '…' : text);
+  saveMemory();
+  updateStats();
+  textarea.value = '';
+  addMessage('system', `Texte appris ! (${sentenceCount} phrase(s) analysée(s))`);
+}
+
+function normalizeWord(word){
+  return word.toLowerCase().replace(/[^a-zàâäéèêëïîôöùûüç0-9'-]/gi, '');
+}
+
+/* ---------------------- APPRENTISSAGE Q/R ---------------------- */
+function learnQA(){
+  const q = document.getElementById('qaQuestion').value.trim();
+  const a = document.getElementById('qaAnswer').value.trim();
+  if(!q || !a){
+    addMessage('system', "Remplissez la question ET la réponse avant d'ajouter.");
+    return;
+  }
+  memory.qa.push({ question: q, answer: a });
+  saveMemory();
+  updateStats();
+  document.getElementById('qaQuestion').value = '';
+  document.getElementById('qaAnswer').value = '';
+  addMessage('system', `Paire question/réponse apprise : « ${q} »`);
+}
+
+/* ---------------------- RECHERCHE DE REPONSE ---------------------- */
+function bagOfWords(str){
+  return str.toLowerCase()
+    .split(/\s+/)
+    .map(normalizeWord)
+    .filter(w => w.length > 0 && !STOPWORDS.has(w));
+}
+
+function jaccardSimilarity(setA, setB){
+  const a = new Set(setA), b = new Set(setB);
+  const intersection = [...a].filter(x => b.has(x));
+  const union = new Set([...a, ...b]);
+  if(union.size === 0) return 0;
+  return intersection.length / union.size;
+}
+
+function findBestQA(userMessage){
+  const userWords = bagOfWords(userMessage);
+  if(userWords.length === 0 || memory.qa.length === 0) return null;
+
+  let best = null;
+  let bestScore = 0;
+  memory.qa.forEach(pair => {
+    const qWords = bagOfWords(pair.question);
+    const score = jaccardSimilarity(userWords, qWords);
+    if(score > bestScore){
+      bestScore = score;
+      best = pair;
+    }
+  });
+
+  return bestScore >= 0.3 ? best : null;
+}
+
+function generateFromModel(userMessage){
+  const keys = Object.keys(memory.model);
+  if(keys.length === 0) return null;
+
+  // essaie de trouver un mot-clé de la question présent dans le modèle
+  const candidateWords = bagOfWords(userMessage).filter(w => memory.model[w] && memory.model[w].length > 0);
+  let startKey;
+  if(candidateWords.length > 0){
+    startKey = candidateWords[Math.floor(Math.random() * candidateWords.length)];
+  } else {
+    startKey = keys[Math.floor(Math.random() * keys.length)];
+  }
+
+  const output = [];
+  let currentKey = startKey;
+  const maxWords = 25;
+
+  // on récupère la forme originale d'un des mots suivants pour amorcer, sinon la clé elle-même
+  output.push(capitalizeFirst(currentKey));
+
+  for(let i = 0; i < maxWords; i++){
+    const nextOptions = memory.model[currentKey];
+    if(!nextOptions || nextOptions.length === 0) break;
+    const next = nextOptions[Math.floor(Math.random() * nextOptions.length)];
+    if(next === null) break; // fin de phrase
+    output.push(next);
+    currentKey = normalizeWord(next);
+    if(!memory.model[currentKey]) break;
+  }
+
+  if(output.length < 2) return null;
+  return output.join(' ') + '.';
+}
+
+function capitalizeFirst(word){
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/* ---------------------- FICHES PERSONNES (noms, âge, ville, couleur...) ---------------------- */
+let currentSubject = null; // dernier nom mentionné dans la conversation
+const PRONOUNS_A_IGNORER = ['il','elle','on','je','tu','nous','vous','ils','elles','ça','cela','qui','ci'];
+
+function capitalizeName(str){
+  return str.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
+function ensureProfile(name){
+  const key = name.trim().toLowerCase();
+  if(!memory.profiles[key]){
+    memory.profiles[key] = { displayName: capitalizeName(name), attributes: {} };
+  }
+  return memory.profiles[key];
+}
+
+function setAttribute(name, category, value){
+  const profile = ensureProfile(name);
+  profile.attributes[category.trim().toLowerCase()] = value.trim();
+  saveMemory();
+  renderProfiles();
+}
+
+function getAttribute(name, category){
+  const key = name.trim().toLowerCase();
+  const profile = memory.profiles[key];
+  if(!profile) return null;
+  return profile.attributes[category.trim().toLowerCase()] || null;
+}
+
+// Extraction automatique de faits depuis un message du chat
+function parseFacts(message){
+  const learned = [];
+  let subject = currentSubject;
+
+  let m = message.match(/je m'appelle\s+([a-zà-ÿ]+(?:[ -][a-zà-ÿ]+)?)/i);
+  if(m){
+    subject = capitalizeName(m[1]);
+    currentSubject = subject;
+    ensureProfile(subject);
+    learned.push(`le prénom : ${subject}`);
+  }
+
+  m = message.match(/mon nom est\s+([a-zà-ÿ]+(?:[ -][a-zà-ÿ]+)?)/i);
+  if(m){
+    subject = capitalizeName(m[1]);
+    currentSubject = subject;
+    ensureProfile(subject);
+    learned.push(`le prénom : ${subject}`);
+  }
+
+  m = message.match(/j'ai\s+(\d{1,3})\s*ans/i);
+  if(m){
+    const subj = subject || 'Moi';
+    setAttribute(subj, 'âge', m[1]);
+    learned.push(`l'âge de ${subj} : ${m[1]} ans`);
+    subject = subj;
+  }
+
+  m = message.match(/([a-zà-ÿ]+)\s+a\s+(\d{1,3})\s*ans/i);
+  if(m && !PRONOUNS_A_IGNORER.includes(m[1].toLowerCase())){
+    const subj = capitalizeName(m[1]);
+    setAttribute(subj, 'âge', m[2]);
+    learned.push(`l'âge de ${subj} : ${m[2]} ans`);
+    subject = subj;
+  }
+
+  m = message.match(/j'habite\s+(?:à|a|au|en)\s+([a-zà-ÿ][a-zà-ÿ\- ]*?)(?:[.,!?]|$)/i);
+  if(m){
+    const subj = subject || 'Moi';
+    const ville = capitalizeName(m[1]);
+    setAttribute(subj, 'ville', ville);
+    learned.push(`la ville de ${subj} : ${ville}`);
+    subject = subj;
+  }
+
+  m = message.match(/([a-zà-ÿ]+)\s+habite\s+(?:à|a|au|en)\s+([a-zà-ÿ][a-zà-ÿ\- ]*?)(?:[.,!?]|$)/i);
+  if(m && !PRONOUNS_A_IGNORER.includes(m[1].toLowerCase())){
+    const subj = capitalizeName(m[1]);
+    const ville = capitalizeName(m[2]);
+    setAttribute(subj, 'ville', ville);
+    learned.push(`la ville de ${subj} : ${ville}`);
+    subject = subj;
+  }
+
+  m = message.match(/ma couleur préférée est\s+(?:le |la |l')?([a-zà-ÿ]+)/i);
+  if(m){
+    const subj = subject || 'Moi';
+    const couleur = capitalizeName(m[1]);
+    setAttribute(subj, 'couleur préférée', couleur);
+    learned.push(`la couleur préférée de ${subj} : ${couleur}`);
+    subject = subj;
+  }
+
+  m = message.match(/la couleur préférée de\s+([a-zà-ÿ]+)\s+est\s+(?:le |la |l')?([a-zà-ÿ]+)/i);
+  if(m){
+    const subj = capitalizeName(m[1]);
+    const couleur = capitalizeName(m[2]);
+    setAttribute(subj, 'couleur préférée', couleur);
+    learned.push(`la couleur préférée de ${subj} : ${couleur}`);
+    subject = subj;
+  }
+
+  currentSubject = subject;
+  return learned;
+}
+
+// Répondre à une question factuelle sur une fiche connue
+function answerFactQuestion(message){
+  let m = message.match(/quel âge (?:as-tu|ai-je|j'ai)/i);
+  if(m){
+    const age = getAttribute('Moi', 'âge');
+    return age ? `Tu as ${age} ans.` : null;
+  }
+
+  m = message.match(/quel âge a\s+([a-zà-ÿ]+)/i);
+  if(m){
+    const subj = capitalizeName(m[1]);
+    const age = getAttribute(subj, 'âge');
+    return age ? `${subj} a ${age} ans.` : `Je ne connais pas encore l'âge de ${subj}.`;
+  }
+
+  m = message.match(/où (?:habites-tu|j'habite|est-ce que j'habite)/i);
+  if(m){
+    const ville = getAttribute('Moi', 'ville');
+    return ville ? `Tu habites à ${ville}.` : null;
+  }
+
+  m = message.match(/où habite\s+([a-zà-ÿ]+)/i);
+  if(m){
+    const subj = capitalizeName(m[1]);
+    const ville = getAttribute(subj, 'ville');
+    return ville ? `${subj} habite à ${ville}.` : `Je ne sais pas encore où habite ${subj}.`;
+  }
+
+  m = message.match(/quelle est (?:ta|ma) couleur préférée/i);
+  if(m){
+    const couleur = getAttribute('Moi', 'couleur préférée');
+    return couleur ? `Ta couleur préférée est ${couleur}.` : null;
+  }
+
+  m = message.match(/quelle est la couleur préférée de\s+([a-zà-ÿ]+)/i);
+  if(m){
+    const subj = capitalizeName(m[1]);
+    const couleur = getAttribute(subj, 'couleur préférée');
+    return couleur ? `La couleur préférée de ${subj} est ${couleur}.` : `Je ne connais pas encore la couleur préférée de ${subj}.`;
+  }
+
+  m = message.match(/(?:parle-moi de|qui est)\s+([a-zà-ÿ]+)/i);
+  if(m){
+    const subj = capitalizeName(m[1]);
+    const key = subj.toLowerCase();
+    const profile = memory.profiles[key];
+    if(!profile) return null;
+    const attrs = Object.entries(profile.attributes);
+    if(attrs.length === 0) return `Je connais ${subj} mais je n'ai pas encore d'informations sur cette personne.`;
+    const details = attrs.map(([cat, val]) => `${cat} : ${val}`).join(', ');
+    return `Voici ce que je sais sur ${subj} — ${details}.`;
+  }
+
+  return null;
+}
+
+/* ---------------------- FORMULAIRE MANUEL FICHES ---------------------- */
+function saveProfileField(){
+  const name = document.getElementById('profileName').value.trim();
+  const category = document.getElementById('profileCategory').value.trim();
+  const value = document.getElementById('profileValue').value.trim();
+
+  if(!name || !category || !value){
+    addMessage('system', 'Remplissez le nom, la catégorie ET la valeur avant d\'enregistrer.');
+    return;
+  }
+
+  setAttribute(name, category, value);
+  document.getElementById('profileName').value = '';
+  document.getElementById('profileCategory').value = '';
+  document.getElementById('profileValue').value = '';
+  addMessage('system', `Fiche mise à jour : ${capitalizeName(name)} → ${category} : ${value}`);
+}
+
+function deleteProfile(key){
+  if(!confirm('Supprimer cette fiche ?')) return;
+  delete memory.profiles[key];
+  saveMemory();
+  renderProfiles();
+}
+
+function renderProfiles(){
+  const listEl = document.getElementById('profilesList');
+  if(!listEl) return;
+  const keys = Object.keys(memory.profiles);
+  if(keys.length === 0){
+    listEl.innerHTML = '<p style="font-size:12px;color:var(--muted);">Aucune fiche pour le moment.</p>';
+    return;
+  }
+  let html = '';
+  keys.forEach(key => {
+    const profile = memory.profiles[key];
+    const attrRows = Object.entries(profile.attributes)
+      .map(([cat, val]) => `<div class="attr-row"><span class="attr-label">${escapeHtml(cat)}</span><span>${escapeHtml(val)}</span></div>`)
+      .join('');
+    html += `
+      <div class="profile-card">
+        <div class="profile-header">
+          <span class="profile-name">👤 ${escapeHtml(profile.displayName)}</span>
+          <span class="profile-del" onclick="deleteProfile('${key}')">✕</span>
+        </div>
+        ${attrRows || '<div class="attr-row" style="color:var(--muted);">Aucun détail enregistré</div>'}
+      </div>`;
+  });
+  listEl.innerHTML = html;
+}
+
+function respond(userMessage){
+  // 1. extraction automatique de faits (nom, âge, ville, couleur...)
+  const learned = parseFacts(userMessage);
+  if(learned.length > 0){
+    return `J'ai retenu ${learned.join(', ')}.`;
+  }
+
+  // 2. réponse à une question sur une fiche connue
+  const factAnswer = answerFactQuestion(userMessage);
+  if(factAnswer) return factAnswer;
+
+  // 3. paires Q/R apprises
+  const qaMatch = findBestQA(userMessage);
+  if(qaMatch) return qaMatch.answer;
+
+  // 4. génération par chaîne de Markov à partir des textes appris
+  const generated = generateFromModel(userMessage);
+  if(generated) return generated;
+
+  // 5. rien appris
+  return "Je suis ZoomX et je n'ai pas encore assez appris pour répondre à ça. Donnez-moi un texte à lire, ou apprenez-moi une question/réponse dans le panneau de gauche !";
+}
+
+/* ---------------------- GESTION DES CONVERSATIONS ---------------------- */
+let conversations = [];   // [{id, title, messages:[{type,text}]}]
+let currentConvId = null;
+
+function loadConversations(){
+  try{
+    const raw = localStorage.getItem('chatbotConversations');
+    if(raw){
+      conversations = JSON.parse(raw);
+    }
+  }catch(e){ console.error('Erreur chargement conversations', e); }
+
+  if(!conversations || conversations.length === 0){
+    conversations = [];
+    createConversation();
+  } else {
+    currentConvId = conversations[0].id;
+  }
+}
+
+function saveConversations(){
+  try{
+    localStorage.setItem('chatbotConversations', JSON.stringify(conversations));
+  }catch(e){ console.error('Erreur sauvegarde conversations', e); }
+}
+
+function createConversation(){
+  const conv = {
+    id: 'conv_' + Date.now(),
+    title: 'Nouvelle discussion',
+    messages: []
+  };
+  conversations.unshift(conv);
+  currentConvId = conv.id;
+  saveConversations();
+  return conv;
+}
+
+function getCurrentConversation(){
+  return conversations.find(c => c.id === currentConvId);
+}
+
+function newDiscussion(){
+  createConversation();
+  renderConversationList();
+  renderChatWindow();
+  addMessage('system', 'Nouvelle discussion démarrée — la mémoire apprise (textes et Q/R) est conservée.', false);
+}
+
+function switchConversation(id){
+  currentConvId = id;
+  renderConversationList();
+  renderChatWindow();
+}
+
+function deleteConversation(id, event){
+  event.stopPropagation();
+  if(!confirm('Supprimer cette discussion ?')) return;
+  conversations = conversations.filter(c => c.id !== id);
+  if(conversations.length === 0){
+    createConversation();
+  } else if(currentConvId === id){
+    currentConvId = conversations[0].id;
+  }
+  saveConversations();
+  renderConversationList();
+  renderChatWindow();
+}
+
+function renderConversationList(){
+  const listEl = document.getElementById('convList');
+  listEl.innerHTML = '';
+  conversations.forEach(conv => {
+    const item = document.createElement('div');
+    item.className = 'conv-item' + (conv.id === currentConvId ? ' active' : '');
+    item.onclick = () => switchConversation(conv.id);
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'title';
+    titleSpan.textContent = conv.title;
+
+    const delSpan = document.createElement('span');
+    delSpan.className = 'del-btn';
+    delSpan.textContent = '✕';
+    delSpan.onclick = (e) => deleteConversation(conv.id, e);
+
+    item.appendChild(titleSpan);
+    item.appendChild(delSpan);
+    listEl.appendChild(item);
+  });
+}
+
+function renderChatWindow(){
+  const chatWindow = document.getElementById('chatWindow');
+  chatWindow.innerHTML = '';
+  const conv = getCurrentConversation();
+  if(conv){
+    conv.messages.forEach(m => appendBubble(m.type, m.text));
+  }
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+/* ---------------------- INTERFACE CHAT ---------------------- */
+function appendBubble(type, text){
+  const chatWindow = document.getElementById('chatWindow');
+  const div = document.createElement('div');
+  div.className = 'msg ' + type;
+  div.textContent = text;
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function addMessage(type, text, persist){
+  appendBubble(type, text);
+  if(persist === false) return;
+
+  const conv = getCurrentConversation();
+  if(!conv) return;
+  conv.messages.push({ type, text });
+
+  // titre auto = premier message utilisateur
+  if(type === 'user' && conv.title === 'Nouvelle discussion'){
+    conv.title = text.length > 28 ? text.slice(0, 28) + '…' : text;
+  }
+  saveConversations();
+  renderConversationList();
+}
+
+function sendMessage(){
+  const input = document.getElementById('userInput');
+  const message = input.value.trim();
+  if(!message) return;
+  addMessage('user', message);
+  input.value = '';
+
+  setTimeout(() => {
+    const reply = respond(message);
+    addMessage('bot', reply);
+  }, 250);
+}
+
+/* ---------------------- MEMOIRE / STATS ---------------------- */
+function updateStats(){
+  const wordCount = Object.keys(memory.model).length;
+  const profileCount = Object.keys(memory.profiles).length;
+  document.getElementById('stats').innerHTML = `
+    <span>📄 Textes appris : <b>${memory.texts.length}</b></span>
+    <span>🔤 Mots en vocabulaire : <b>${wordCount}</b></span>
+    <span>❓ Paires Q/R : <b>${memory.qa.length}</b></span>
+    <span>👤 Fiches personnes : <b>${profileCount}</b></span>
+  `;
+
+  const listEl = document.getElementById('memoryList');
+  if(memory.texts.length === 0 && memory.qa.length === 0){
+    listEl.innerHTML = '<div>Aucune mémoire pour le moment.</div>';
+  } else {
+    let html = '';
+    memory.texts.forEach(t => html += `<div>📄 ${escapeHtml(t)}</div>`);
+    memory.qa.forEach(p => html += `<div>❓ ${escapeHtml(p.question)}</div>`);
+    listEl.innerHTML = html;
+  }
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function clearMemory(){
+  if(!confirm('Effacer toute la mémoire du chatbot (textes, vocabulaire, Q/R et fiches personnes) ?')) return;
+  memory = { texts: [], model: {}, qa: [], profiles: {} };
+  currentSubject = null;
+  saveMemory();
+  updateStats();
+  renderProfiles();
+  addMessage('system', 'Mémoire réinitialisée.');
+}
+
+/* ---------------------- INITIALISATION ---------------------- */
+loadMemory();
+updateStats();
+renderProfiles();
+loadConversations();
+renderConversationList();
+renderChatWindow();
+if(getCurrentConversation().messages.length === 0){
+  addMessage('system', 'Bonjour, je suis ZoomX ! Apprenez-moi des textes ou des questions/réponses dans le panneau de gauche, puis discutons.');
+}
+</script>
+
+</body>
+</html>
